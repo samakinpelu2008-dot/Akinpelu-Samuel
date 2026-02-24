@@ -2,75 +2,125 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Classic Ludo</title>
+<title>Simple Chess</title>
 <style>
 body{
   margin:0;
+  background:#222;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
   font-family:Arial;
-  background:#f4f4f4;
-  text-align:center;
 }
-h2{margin:10px;}
 .board{
-  width:600px;
-  height:600px;
-  margin:10px auto;
+  width:480px;
+  height:480px;
   display:grid;
-  grid-template-columns:repeat(15,1fr);
-  grid-template-rows:repeat(15,1fr);
-  border:4px solid #222;
+  grid-template-columns:repeat(8,1fr);
+  border:4px solid #000;
 }
-.cell{
-  border:1px solid #ddd;
-  position:relative;
+.square{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:38px;
+  cursor:pointer;
 }
-.home{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  grid-template-rows:repeat(2,1fr);
-}
-.red{background:#ff4d4d;}
-.green{background:#4dff4d;}
-.yellow{background:#ffff66;}
-.blue{background:#4da6ff;}
-
-.path{background:#fff;}
-.safe{background:#ccc;}
-
-.center{
-  background:linear-gradient(45deg, red 25%, green 25%, green 50%, yellow 50%, yellow 75%, blue 75%);
-}
-
-.token{
-  width:22px;
-  height:22px;
-  border-radius:50%;
+.light{ background:#f0d9b5; }
+.dark{ background:#b58863; }
+.selected{ outline:3px solid red; }
+.info{
   position:absolute;
-  cursor:pointer;
-  border:2px solid #000;
-}
-
-#controls{
-  margin-top:10px;
-}
-
-button{
-  padding:8px 18px;
-  font-size:16px;
-  cursor:pointer;
+  top:10px;
+  color:white;
 }
 </style>
 </head>
 <body>
 
-<h2>Classic Ludo</h2>
+<div class="info" id="info">Turn: White</div>
 <div class="board" id="board"></div>
 
-<div id="controls">
-  <button id="rollBtn">Roll Dice</button>
-  <p id="info">Turn: Red</p>
-</div>
+<script>
+const board = document.getElementById("board");
+const info = document.getElementById("info");
 
-<script src="game.js"></script>
+let selected = null;
+let turn = "white";
+
+const pieces = {
+  r:"♜", n:"♞", b:"♝", q:"♛", k:"♚", p:"♟",
+  R:"♖", N:"♘", B:"♗", Q:"♕", K:"♔", P:"♙"
+};
+
+let game = [
+["r","n","b","q","k","b","n","r"],
+["p","p","p","p","p","p","p","p"],
+["","","","","","","",""],
+["","","","","","","",""],
+["","","","","","","",""],
+["","","","","","","",""],
+["P","P","P","P","P","P","P","P"],
+["R","N","B","Q","K","B","N","R"]
+];
+
+function draw(){
+  board.innerHTML="";
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const square = document.createElement("div");
+      square.classList.add("square");
+      square.classList.add((r+c)%2==0?"light":"dark");
+      square.dataset.row=r;
+      square.dataset.col=c;
+
+      if(game[r][c]!=""){
+        square.textContent = pieces[game[r][c]];
+      }
+
+      square.onclick=()=>clickSquare(r,c,square);
+
+      board.appendChild(square);
+    }
+  }
+}
+
+function clickSquare(r,c,square){
+  const piece = game[r][c];
+
+  if(selected){
+    movePiece(selected.r,selected.c,r,c);
+    selected=null;
+    draw();
+    return;
+  }
+
+  if(piece!="" && isCorrectTurn(piece)){
+    selected={r,c};
+    square.classList.add("selected");
+  }
+}
+
+function isCorrectTurn(piece){
+  if(turn==="white") return piece===piece.toUpperCase();
+  return piece===piece.toLowerCase();
+}
+
+function movePiece(r1,c1,r2,c2){
+  const piece = game[r1][c1];
+  if(!piece) return;
+
+  // Simple movement validation (basic only)
+  game[r2][c2]=piece;
+  game[r1][c1]="";
+
+  turn = turn==="white"?"black":"white";
+  info.textContent="Turn: "+turn.charAt(0).toUpperCase()+turn.slice(1);
+}
+
+draw();
+</script>
+
 </body>
 </html>
