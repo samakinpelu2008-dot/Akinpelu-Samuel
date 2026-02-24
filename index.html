@@ -3,11 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Professional Chess</title>
-
-<!-- Chessboard CSS -->
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.css"/>
-
+<link rel="stylesheet" href="chessboard.css">
 <style>
 body{
   margin:0;
@@ -17,23 +13,15 @@ body{
   align-items:center;
   justify-content:center;
   height:100vh;
-  font-family:Segoe UI;
+  font-family:Segoe UI, sans-serif;
 }
-
-h2{
-  color:white;
-  margin-bottom:10px;
-}
-
-#board{
-  width:640px;
-}
-
-#status{
-  margin-top:10px;
-  color:white;
-  font-weight:bold;
-}
+h2{color:white; margin-bottom:10px;}
+#board{width:640px; height:640px;}
+#status{color:white; margin-top:10px; font-weight:bold;}
+.square{width:80px; height:80px; display:flex; justify-content:center; align-items:center; font-size:48px; cursor:pointer;}
+.light{background:#f0d9b5;}
+.dark{background:#b58863;}
+.selected{outline:4px solid red;}
 </style>
 </head>
 <body>
@@ -42,66 +30,9 @@ h2{
 <div id="board"></div>
 <div id="status"></div>
 
-<!-- Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.13.4/chess.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.js"></script>
-
-<script>
-var board = null
-var game = new Chess()
-var statusEl = document.getElementById('status')
-
-function updateStatus() {
-  var moveColor = 'White'
-  if (game.turn() === 'b') {
-    moveColor = 'Black'
-  }
-
-  if (game.in_checkmate()) {
-    statusEl.innerHTML = 'Game over, ' + moveColor + ' is in checkmate.'
-  } else if (game.in_draw()) {
-    statusEl.innerHTML = 'Game over, drawn position'
-  } else {
-    statusEl.innerHTML = moveColor + ' to move'
-    if (game.in_check()) {
-      statusEl.innerHTML += ', ' + moveColor + ' is in check'
-    }
-  }
-}
-
-function onDragStart(source, piece) {
-  if (game.game_over()) return false
-  if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-      (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-    return false
-  }
-}
-
-function onDrop(source, target) {
-  var move = game.move({
-    from: source,
-    to: target,
-    promotion: 'q'
-  })
-
-  if (move === null) return 'snapback'
-  updateStatus()
-}
-
-function onSnapEnd() {
-  board.position(game.fen())
-}
-
-board = Chessboard('board', {
-  draggable: true,
-  position: 'start',
-  onDragStart: onDragStart,
-  onDrop: onDrop,
-  onSnapEnd: onSnapEnd
-})
-
-updateStatus()
-</script>
+<script src="chess.js"></script>
+<script src="chessboard.js"></script>
+<script src="main.js"></script>
 
 </body>
 </html>
