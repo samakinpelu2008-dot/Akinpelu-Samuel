@@ -1,143 +1,154 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T COINS Mobile Simulator</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-  body { display: flex; flex-direction: column; height: 100vh; background: #111; color: #fff; }
-  
-  /* Top graph container */
-  #graph-container { height: 40%; background: #111; position: relative; }
-  canvas#coinGraph { width: 100%; height: 100%; display: block; }
-
-  /* Bottom scrollable coin cards */
-  #coin-cards { height: 60%; overflow-y: auto; padding: 5px; display: flex; flex-direction: column; gap: 5px; }
-  .coin-card { background: #222; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; cursor: pointer; height: 50px; }
-  .coin-name { font-weight: bold; font-size: 14px; }
-  .coin-change { font-weight: bold; font-size: 13px; min-width: 50px; text-align: right; }
-  .up { color: #0f0; }
-  .down { color: #f00; }
-  .mini-graph { width: 60px; height: 30px; background: #111; }
-</style>
+  <title>Math Battle PvP</title>
 </head>
 <body>
 
-<!-- Top graph -->
-<div id="graph-container">
-  <canvas id="coinGraph"></canvas>
-</div>
+<h2>Math Battle - Player vs Player</h2>
 
-<!-- Scrollable coin cards -->
-<div id="coin-cards"></div>
+<button onclick="createRoom()">Create Room</button>
+<input id="roomInput" placeholder="Enter Room Code">
+<button onclick="joinRoom()">Join Room</button>
 
-<script>
-const coins = [
-  { name: "Alpha", color: "#ff5733" },
-  { name: "Beta", color: "#33ff57" },
-  { name: "Rho", color: "#3357ff" },
-  { name: "Mendel", color: "#ff33aa" },
-  { name: "Theta", color: "#ffaa33" },
-  { name: "Delta", color: "#33aaff" },
-  { name: "Epsilon", color: "#aa33ff" },
-  { name: "Zeta", color: "#33ffaa" },
-  { name: "Psi", color: "#ff3333" },
-  { name: "Omega", color: "#33ffff" },
-];
+<h3 id="roomCodeDisplay"></h3>
+<h3 id="question"></h3>
 
-let selectedCoin = coins[0];
-let coinData = {};
+<div id="options"></div>
 
-// Initialize coin price history (50 points)
-coins.forEach(c => {
-  coinData[c.name] = Array.from({length:50}, () => 100 + Math.random()*4 - 2); // small fluctuations
+<h3 id="scoreBoard"></h3>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, set, update, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDyvQ6dEJ5ePgfOSWT4cKkUsQJiJBDarUA",
+  authDomain: "de-quizz.firebaseapp.com",
+  projectId: "de-quizz",
+  storageBucket: "de-quizz.firebasestorage.app",
+  messagingSenderId: "655485330786",
+  appId: "1:655485330786:web:95e01bf8dd5fd88cb0f83b"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+let playerId = null;
+let roomCode = null;
+
+signInAnonymously(auth).then((userCred) => {
+  playerId = userCred.user.uid;
+  console.log("Logged in:", playerId);
 });
 
-// Coin cards container
-const cardContainer = document.getElementById("coin-cards");
+function generateRoomCode() {
+  return Math.floor(10000 + Math.random() * 90000).toString();
+}
 
-// Render coin cards
-function renderCards() {
-  cardContainer.innerHTML = "";
-  coins.forEach(c => {
-    const card = document.createElement("div");
-    card.className = "coin-card";
+window.createRoom = async function() {
+  roomCode = generateRoomCode();
 
-    // Calculate change %
-    const data = coinData[c.name];
-    const change = ((data[data.length-1] - data[data.length-2])/data[data.length-2]*100).toFixed(2);
-    const upDown = change >= 0 ? "up" : "down";
+  await set(ref(db, "rooms/" + roomCode), {
+    players: {
+      host: { score: 0 }
+    },
+    currentQuestion: 0,
+    questionState: { locked: false },
+    question: generateQuestion()
+  });
 
-    // Mini graph canvas
-    const miniCanvas = document.createElement("canvas");
-    miniCanvas.className = "mini-graph";
-    miniCanvas.width = 60;
-    miniCanvas.height = 30;
-    const ctxMini = miniCanvas.getContext("2d");
-    ctxMini.clearRect(0,0,miniCanvas.width, miniCanvas.height);
-    ctxMini.beginPath();
-    const step = miniCanvas.width/(data.length-1);
-    data.forEach((p,i)=>{
-      const y = miniCanvas.height - ((p-95)/10 * miniCanvas.height);
-      const x = i*step;
-      if(i===0) ctxMini.moveTo(x,y); else ctxMini.lineTo(x,y);
+  document.getElementById("roomCodeDisplay").innerText = "Room Code: " + roomCode;
+  listenRoom();
+}
+
+window.joinRoom = async function() {
+  roomCode = document.getElementById("roomInput").value;
+
+  await update(ref(db, "rooms/" + roomCode + "/players"), {
+    guest: { score: 0 }
+  });
+
+  listenRoom();
+}
+
+function generateQuestion() {
+  let a = Math.floor(Math.random() * 10) + 1;
+  let b = Math.floor(Math.random() * 10) + 1;
+  let correct = a + b;
+
+  let options = [
+    correct,
+    correct + 1,
+    correct - 1,
+    correct + 2
+  ].sort(() => Math.random() - 0.5);
+
+  return {
+    text: `${a} + ${b}`,
+    correct: correct,
+    options: options
+  };
+}
+
+function listenRoom() {
+  onValue(ref(db, "rooms/" + roomCode), (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+
+    displayQuestion(data.question);
+    displayScores(data.players);
+  });
+}
+
+function displayQuestion(q) {
+  document.getElementById("question").innerText = q.text;
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+  q.options.forEach(option => {
+    let btn = document.createElement("button");
+    btn.innerText = option;
+    btn.onclick = () => answer(option);
+    optionsDiv.appendChild(btn);
+  });
+}
+
+async function answer(selected) {
+  const roomRef = ref(db, "rooms/" + roomCode);
+  const snapshot = await get(roomRef);
+  const data = snapshot.val();
+
+  if (data.questionState.locked) return;
+
+  let role = data.players.host ? "host" : "guest";
+  let correct = data.question.correct;
+
+  if (selected === correct) {
+    await update(roomRef, {
+      [`players/host/score`]: (data.players.host?.score || 0) + 2,
+      questionState: { locked: true }
     });
-    ctxMini.strokeStyle = c.color;
-    ctxMini.lineWidth = 1;
-    ctxMini.stroke();
-
-    card.innerHTML = `<span class="coin-name">${c.name}</span>
-                      <span class="coin-change ${upDown}">${change}%</span>`;
-    card.appendChild(miniCanvas);
-
-    card.onclick = () => { selectedCoin = c; };
-
-    cardContainer.appendChild(card);
-  });
+  } else {
+    await update(roomRef, {
+      [`players/host/score`]: (data.players.host?.score || 0) - 1
+    });
+  }
 }
 
-// Top graph
-const canvas = document.getElementById("coinGraph");
-const ctx = canvas.getContext("2d");
-
-function drawGraph() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const data = coinData[selectedCoin.name];
-  ctx.beginPath();
-  const step = canvas.width / (data.length-1);
-  data.forEach((p,i)=>{
-    const y = canvas.height - ((p-95)/10 * canvas.height);
-    const x = i*step;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  });
-  ctx.strokeStyle = selectedCoin.color;
-  ctx.lineWidth = 2;
-  ctx.stroke();
+function displayScores(players) {
+  let text = "";
+  for (let p in players) {
+    text += p + ": " + players[p].score + " | ";
+  }
+  document.getElementById("scoreBoard").innerText = text;
 }
 
-// Smoothly update data (small realistic changes)
-function updateData() {
-  coins.forEach(c => {
-    const last = coinData[c.name][coinData[c.name].length-1];
-    const change = (Math.random() - 0.5) * 0.5; // subtle ±0.25%
-    let newVal = last + change;
-    coinData[c.name].push(newVal);
-    if(coinData[c.name].length > 50) coinData[c.name].shift();
-  });
-  renderCards();
-}
-
-// Animate top graph
-function animate() {
-  updateData();
-  drawGraph();
-  requestAnimationFrame(animate);
-}
-
-// Initial render
-renderCards();
-animate();
 </script>
+
 </body>
 </html>
